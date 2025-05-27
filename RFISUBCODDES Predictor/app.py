@@ -143,15 +143,19 @@ with tab2:
         st.plotly_chart(fig, use_container_width=True)
         
         # Heatmap by day of week and month
-        st.subheader("Transaction Heatmap")
-        heatmap_data = df_filtered.groupby(['Month', 'Day of Week']).size().unstack().fillna(0)
-        fig, ax = plt.subplots(figsize=(12, 6))
-        sns.heatmap(heatmap_data, cmap="YlGnBu", annot=True, fmt="g", ax=ax)  # Changed fmt to "g" which handles both int and float
-        ax.set_title(f"Transactions by Day of Week and Month for {selected_pos}")
-        ax.set_yticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
-        ax.set_xticklabels(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
-        st.pyplot(fig)
+    st.subheader("Transaction Heatmap")
+    heatmap_data = df_filtered.groupby(['Month', 'Day of Week']).size().unstack().fillna(0)
 
+        # Ensure we have all 12 months (even if empty)
+    all_months = pd.DataFrame(index=range(1, 13))
+    heatmap_data = all_months.join(heatmap_data).fillna(0)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.heatmap(heatmap_data, cmap="YlGnBu", annot=True, fmt="g", ax=ax)
+    ax.set_title(f"Transactions by Day of Week and Month for {selected_pos}")
+    ax.set_yticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    ax.set_xticklabels(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+    st.pyplot(fig)
 # ---------- TOP CATEGORIES ----------
 with tab3:
     st.header("Top Categories Insights")
