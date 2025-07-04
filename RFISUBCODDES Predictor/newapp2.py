@@ -37,41 +37,73 @@ avg_rpc = 10.0
 # Streamlit UI
 st.set_page_config(page_title="Ancillary Revenue Predictor", layout="wide", page_icon="📊")
 
-# CSS
+# CSS Styling
 st.markdown("""
 <style>
-    .main { background-color: #f8f9fa; }
-    .stButton>button {
-        background-color: #000;
+    html, body, .main {
+        background-color: #f4f6f8;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    h1, h2, h3 {
+        color: #2c3e50;
+    }
+    .stButton > button {
+        background-color: #0066cc;
         color: white;
-        border-radius: 5px;
+        border-radius: 8px;
         padding: 10px 24px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
     }
+    .stButton > button:hover {
+        background-color: #004999;
+    }
+    
     .prediction-card {
-        background-color: black;
-        border-radius: 10px;
-        padding: 15px;
-        margin: 10px 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    background-color: #121212;           
+    color: #f0f0f0;                       
+    border-left: 6px solid #1e90ff;       
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    box-shadow: 0 4px 12px rgba(30, 144, 255, 0.3); 
+    transition: transform 0.2s ease;
     }
-    .header { color: #2c3e50; }
+
+    .prediction-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 6px 16px rgba(30, 144, 255, 0.6);
+    }
+    progress {
+        width: 100%;
+        height: 20px;
+        appearance: none;
+    }
+    progress::-webkit-progress-bar {
+        background-color: #f3f3f3;
+        border-radius: 10px;
+    }
+    progress::-webkit-progress-value {
+        background-color: #0066cc;
+        border-radius: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
+# Layout
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.title("📊 Ancillary Revenue Predictor")
+    st.title("Ancillary Revenue Predictor")
     st.markdown("Enter details to get the top predicted ancillary types with visualizations.")
+    st.subheader("🛠️ Input Parameters")
 
-    st.subheader("Input Parameters")
     point_of_sale = st.selectbox("Point of Sale", le_pos.classes_)
     year = st.number_input("Year", min_value=2015, max_value=2030, step=1)
     month = st.selectbox("Month", list(range(1, 13)))
 
     if st.button("Predict"):
         encoded_pos = le_pos.transform([point_of_sale])[0]
-
         input_df = pd.DataFrame([{
             'Point_of_Sale_encoded': encoded_pos,
             'Year': int(year),
@@ -109,27 +141,29 @@ with col1:
             ))
             conn.commit()
             conn.close()
-            st.success("Prediction saved !")
+            st.success("✅ Prediction saved successfully!")
         except Exception as e:
             st.error(f"MySQL Error: {e}")
 
-# Display results and visualizations
+# Display predictions
 if 'predictions' in st.session_state:
     predictions = st.session_state['predictions']
     with col2:
         st.subheader("Prediction Results")
 
-        with st.expander("Top Predictions", expanded=True):
+        with st.expander("📌 Top Predictions", expanded=True):
+            colors = ['#28a745', '#ffc107', '#dc3545']
             for i, (label, prob) in enumerate(zip(predictions['labels'], predictions['probs'])):
                 progress_value = float(prob) * 100
                 st.markdown(f"""
                 <div class="prediction-card">
-                    <h3>#{i+1}: {label}</h3>
+                    <h3>#{i+1} <span style="background-color:{colors[i]}; color:white; padding:4px 10px; border-radius:6px;">{label}</span></h3>
                     <p>Confidence: {round(progress_value, 2)}%</p>
                     <progress value="{progress_value}" max="100"></progress>
                 </div>
                 """, unsafe_allow_html=True)
 
+        st.markdown("---")
         tab1, tab2, tab3, tab4 = st.tabs([
             "Probability Distribution", 
             "Top Categories", 
@@ -165,11 +199,10 @@ if 'predictions' in st.session_state:
                 colors=sns.color_palette("pastel")
             )
             ax.axis('equal')
-            ax.set_title("Top 3 Predictions Distribution")
             st.pyplot(fig)
 
         with tab3:
-            st.subheader("Monthly Trend Analysis")
+            st.subheader(" Monthly Trend Simulation")
             months = list(range(1, 13))
             simulated_data = {
                 'Month': months,
@@ -182,14 +215,14 @@ if 'predictions' in st.session_state:
             for label in predictions['labels']:
                 ax.plot(df_simulated['Month'], df_simulated[label], marker='o', label=label)
             ax.set_xlabel("Month")
-            ax.set_ylabel("Probability (%)")
+            ax.set_ylabel("Simulated Confidence (%)")
             ax.set_title("Simulated Monthly Trends for Top Categories")
             ax.legend()
             ax.grid(True)
             st.pyplot(fig)
 
         with tab4:
-            st.subheader("📂 All Predictions")
+            st.subheader("Recent Predictions from DB")
             try:
                 conn = connect_to_mysql()
                 df_recent = pd.read_sql(
@@ -204,17 +237,11 @@ if 'predictions' in st.session_state:
 # Sidebar
 with st.sidebar:
     st.markdown("## 📘 About")
-    st.markdown("""
-This tool predicts likely ancillary revenue types using:
-- Point of Sale
-- Year and Month
-- Historical averages
-""")
+    st.info("This tool predicts likely ancillary revenue types based on POS, year, and month using an ML model.")
 
-    st.markdown("## 📊 Model Info")
-    st.write("**Model:** XGBoost Classifier")
-    st.write(f"**Target Classes:** {len(le_target.classes_)}")
-    st.write(f"**POS Options:** {len(le_pos.classes_)}")
+    st.markdown("## 📊 Model Details")
+    st.metric("Target Classes", len(le_target.classes_))
+    st.metric("POS Options", len(le_pos.classes_))
 
-    st.markdown("## 📝 Instructions")
-    st.markdown("1. Select POS\n2. Choose Year and Month\n3. Click Predict")
+    st.markdown("## 🧭 How to Use")
+    st.code("1. Select POS\n2. Set Year and Month\n3. Click Predict")
